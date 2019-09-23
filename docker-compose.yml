@@ -1,0 +1,26 @@
+version: "3.4"
+services:
+  products:
+    build:
+      context: products/.
+    environment:
+      DB: mongodb://db/app
+    ports:
+      - 4000:4000
+    links:
+      - db
+    networks:
+      - default
+  db:
+    image: mongo:latest
+    networks:
+      - default
+  seed_products:
+    build: ./seed_products
+    links:
+      - db
+    networks:
+      - default
+networks:
+  default:
+    driver: bridge
