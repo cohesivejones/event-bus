@@ -8,19 +8,27 @@ const sendCallback = (error, result) => {
   }
 }
 
-const productCreated = (product) => {
+const productCreated = (id) => {
   return [{
     topic: 'PRODUCTS',
-    messages: JSON.stringify({ event: 'PRODUCT_CREATED', id: product._id })
+    messages: JSON.stringify({ event: 'PRODUCT_CREATED', id})
+  }];
+}
+
+const productDeleted = (id) => {
+  return [{
+    topic: 'PRODUCTS',
+    messages: JSON.stringify({ event: 'PRODUCT_DELETED', id})
   }];
 }
 
 exports.create = (producer) => {
   return async function (req, res, next) {
     try {
-      let product = new Product( { name: req.body.name, price: req.body.price });
+      const {name, price} = req.body
+      let product = new Product({ name, price });
       product = await product.save()
-      producer.send(productCreated(product), sendCallback);
+      producer.send(productCreated(product._id), sendCallback);
       res.send(product);
       next();
     } catch (err) {
@@ -50,9 +58,14 @@ exports.update = function (req, res, next) {
   });
 };
 
-exports.delete = function (req, res, next) {
-  Product.findByIdAndRemove(req.params.id, function (err) {
-    if (err) return next(err);
-    res.send('Product deleted successfully');
-  })
+exports.delete = (producer) => async function (req, res, next) {
+    try {
+      const id = req.params.id;
+      await Product.findByIdAndRemove(id);
+      producer.send(productDeleted(id), sendCallback);
+      res.send('Product deleted successfully');
+      next();
+    } catch (err) {
+      next(err);
+    }
 };

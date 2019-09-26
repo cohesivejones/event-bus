@@ -8,7 +8,7 @@ const routes = (producer) => {
   router.get('/', controller.all);
   router.get('/:id', controller.get);
   router.put('/:id/update', controller.update);
-  router.delete('/:id/delete', controller.delete);
+  router.delete('/:id/delete', controller.delete(producer));
   return router;
 }
 
