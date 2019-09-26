@@ -4,23 +4,40 @@ services:
     build:
       context: products/.
     environment:
-      DB: mongodb://db/app
+      DB: mongodb://products_db/app
       KAFKA: kafka:9092
     ports:
       - 4000:4000
     depends_on:
-      - db
+      - products_db
       - kafka
     networks:
       - default
-  db:
+  products_db:
     image: mongo:latest
     networks:
       - default
   seed_products:
     build: ./seed_products
     depends_on:
-      - db
+      - products_db
+    networks:
+      - default
+  catalogs:
+    build:
+      context: catalogs/.
+    environment:
+      DB: mongodb://catalogs_db/app
+      KAFKA: kafka:9092
+    ports:
+      - 4001:4000
+    depends_on:
+      - catalogs_db
+      - kafka
+    networks:
+      - default
+  catalogs_db:
+    image: mongo:latest
     networks:
       - default
   kafka:
