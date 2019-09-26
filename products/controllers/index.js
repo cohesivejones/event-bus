@@ -1,11 +1,32 @@
 const Product = require('../models');
 
-exports.create = function (req, res, next) {
-  let product = new Product( { name: req.body.name, price: req.body.price });
-  product.save(function (err) {
-    if (err) return next(err);
-    res.send('Product created successfully');
-  })
+const sendCallback = (error, result) => {
+  if (error) {
+    console.err('Failed to send event', error);
+  } else {
+    console.log('Sent event', result);
+  }
+}
+
+const productCreated = (product) => {
+  return [{
+    topic: 'PRODUCTS',
+    messages: JSON.stringify({ event: 'PRODUCT_CREATED', id: product._id })
+  }];
+}
+
+exports.create = (producer) => {
+  return async function (req, res, next) {
+    try {
+      let product = new Product( { name: req.body.name, price: req.body.price });
+      product = await product.save()
+      producer.send(productCreated(product), sendCallback);
+      res.send(product);
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
 };
 
 exports.all = function (req, res, next) {

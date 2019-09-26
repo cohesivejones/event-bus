@@ -5,10 +5,12 @@ services:
       context: products/.
     environment:
       DB: mongodb://db/app
+      KAFKA: kafka:9092
     ports:
       - 4000:4000
-    links:
+    depends_on:
       - db
+      - kafka
     networks:
       - default
   db:
@@ -17,8 +19,21 @@ services:
       - default
   seed_products:
     build: ./seed_products
-    links:
+    depends_on:
       - db
+    networks:
+      - default
+  kafka:
+    image: spotify/kafka
+    command: >
+      bash -c
+      "(sleep 15s &&
+      /opt/kafka_2.11-0.10.1.0/bin/kafka-topics.sh
+      --create
+      --zookeeper localhost:2181
+      --replication-factor 1
+      --partitions 1
+      --topic PRODUCTS &) && (supervisord -n)"
     networks:
       - default
 networks:

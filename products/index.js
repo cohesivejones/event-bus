@@ -7,9 +7,15 @@ require('./config/mongo');
 const APP_PORT = 4000;
 const APP_NAME = "PRODUCTS"
 
-const app = express();
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-app.use('/products', routes);
+async function start() {
+  const client = kafka.client();
+  const producer = await kafka.producer(client);
 
-app.listen(APP_PORT, () => console.log(`${APP_NAME} listening on port ${APP_PORT}!`));
+  const app = express();
+  app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({extended: false}));
+  app.use('/products', routes(producer));
+  app.listen(APP_PORT, () => console.log(`${APP_NAME} listening on port ${APP_PORT}!`));
+}
+
+start();
