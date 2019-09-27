@@ -1,39 +1,37 @@
 const kafka = require('kafka-node');
 const Catalog = require('../models');
 
-const TOPICS = [{
-  topic: 'PRODUCTS',
-  partitions: 1,
-  replicationFactor: 1
-}];
+function client() {
+  console.log(`Connecting to ${process.env.KAFKA}`);
+  return new kafka.KafkaClient({kafkaHost: process.env.KAFKA});
+}
 
-const CONSUMER_SETTINGS = {
-  autoCommit: true,
-  fetchMaxWaitMs: 1000,
-  fetchMaxBytes: 1024 * 1024,
-  encoding: 'utf8',
-  fromOffset: false
+function createConsumer() {
+  const TOPICS = [{
+    topic: 'PRODUCTS',
+    partitions: 1,
+    replicationFactor: 1
+  }];
+  const CONSUMER_SETTINGS = {
+    autoCommit: true,
+    fetchMaxWaitMs: 1000,
+    fetchMaxBytes: 1024 * 1024,
+    encoding: 'utf8',
+    fromOffset: false
+  };
+  return new kafka.Consumer(client(), TOPICS, CONSUMER_SETTINGS);
+}
+
+function handleMessage({value}) {
+  const {event, id} = JSON.parse(value);
+  console.log(`Received event ${event} for id ${id}`);
+  (event === 'PRODUCT_CREATED') ?  new Catalog({product_id: id}).save() : Catalog.remove({product_id: id});
 }
 
 function service() {
-  try {
-    const Consumer = kafka.Consumer;
-    const client = new kafka.KafkaClient({kafkaHost: process.env.KAFKA});
-    console.log(`Connecting to ${process.env.KAFKA}`);
-    let consumer = new Consumer(client, TOPICS, CONSUMER_SETTINGS);
-    consumer.on('message', ({value})  => {
-      const {event, id} = JSON.parse(value);
-      console.log(`Received event ${event} for id ${id}`);
-      if (event === 'PRODUCT_CREATED') {
-        new Catalog({product_id: id}).save();
-      } else {
-        Catalog.remove({product_id: id});
-      }
-    });
-    consumer.on('error', (err) => console.log('error', err));
-  } catch(e) {
-    console.log(e);
-  }
+  let consumer = createConsumer();
+  consumer.on('message', handleMessage);
+  consumer.on('error', () => setTimeout(service, 3000));
 }
 
 exports.service = service;
